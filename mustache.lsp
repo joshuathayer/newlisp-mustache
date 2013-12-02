@@ -31,7 +31,7 @@
   (let (start_index (find otag template))
     (if (nil? start_index)
         (if (empty? template) acc (append acc (list (mk-tag "text" nil template))))
-        (letn (before_tag  (0 start_index template) 
+        (letn (before_tag  (0 start_index template)
                acc         (if (empty? before_tag)
                                acc
                                (append acc (list (mk-tag "text" nil before_tag))))
@@ -63,7 +63,7 @@
 
 ;; Step through the list of tags, create a nested list of sections.
 ;; We build structure iteratively.
-;; Section-stack is the list of sections we've discovered. When we find 
+;; Section-stack is the list of sections we've discovered. When we find
 ;; an open-section tag, we create a section assoc and push it on this stack.
 ;; The current section is always the head of that stack.
 ;; We accumulate text and var tags into the current section.
@@ -112,3 +112,17 @@
 
             ;; some other tag
             (nest-sections remainder section-stack)))))
+
+(define (apply-template template vals val-stack)
+  (setq ret (list))
+  (dolist (chunk template)
+    (letn (chunk-type    (lookup 'type chunk)
+           chunk-content (lookup 'content chunk))
+          (if
+            (=  chunk-type "section")
+              (apply-template (lookup 'content chunk) vals)
+            (= chunk-type "text")
+              (setq ret (cons ret (lookup 'content chunk)))
+            (= (lookup 'type chunk) "escaped")
+              (setq ret (cons ret (lookup (sym (lookup 'key chunk)) vals)))))
+    (join (flat ret) ""))
