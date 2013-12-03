@@ -2,7 +2,7 @@
 ;;; This file is a part of the nl-unittest project, released under
 ;;; MIT license.
 ;;;
-;;; See the COPYING file for more details.
+;;; See the LICENSE file for more details.
 ;;;
 ;;; Copyright (c) 2011 by Dương "Yang" ヤン Hà Nguyễn <cmpitg@gmail.com>
 ;;;

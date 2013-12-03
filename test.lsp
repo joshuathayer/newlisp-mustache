@@ -86,15 +86,14 @@
 
 
 ;; -------------- test basic application
-(define Vals:Vals)
-(Vals "vals" '(("root" (("band" "The Grateful Dead")
-                        ("goodyears" ((("year" "1969"))
-                                      (("year" "1977"))
-                                      (("year" "1981"))))
-                        ("members" ((("name" "Jerry") ("instrument" "guitar"))
-                                    (("name" "Phil")  ("instrument" "bass"))
-                                    (("name" "Pig Pen") ("instrument" "harmonica"))))
-                        ))))
+(set 'vals '(("root" (("band" "The Grateful Dead")
+                      ("goodyears" ((("year" "1969"))
+                                    (("year" "1977"))
+                                    (("year" "1981"))))
+                      ("members" ((("name" "Jerry") ("instrument" "guitar"))
+                                  (("name" "Phil")  ("instrument" "bass"))
+                                  (("name" "Pig Pen") ("instrument" "harmonica"))))
+                      ))))
 
 (define apply-template "The band {{band}} has members {{#members}}{{name}} on {{instrument}} {{/members}}. Their good years were {{#goodyears}}{{year}} {{/goodyears}}.")
 (define apply-tags (mustache:next-tag apply-template (list)))
@@ -102,7 +101,7 @@
                       apply-tags
                       (list (mustache:mk-tag "section" "root" (list)))))
 (define apply-result
-  (join (mustache:apply-template apply-parsed (list (Vals "vals")))
+  (join (mustache:apply-template apply-parsed (list vals))
         ""))
 
 (define-test (test_apply)
@@ -112,7 +111,5 @@
 
 
 (UnitTest:run-all 'MAIN)
-
 (println)
-
 (exit)

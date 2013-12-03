@@ -167,3 +167,23 @@
                   (extend ret (list (find-in-val-stack
                                      template-part-key
                                      val-stack))))))))
+
+;; happy little user-facing functions.
+;; these are a little easier to use than the preceeding functions.
+
+;; Tokenize and parse a template, store it by a particular key the provided context.
+(define (add-template ctx idx template)
+  (letn (tags   (next-tag template (list))
+                 parsed (nest-sections
+                        tags
+                        (list (mk-tag "section" "root" (list)))))
+    (ctx idx parsed)))
+
+;; Apply values to a stored template. Value struct should not include
+;; the boilerplae "root" section that (apply-template) users (since
+;; this function adds it).
+(define (run-template ctx idx values)
+  (letn (vals     (list (list "root" values))
+         template (ctx idx) ;; XXX catch unfound
+         ret      (apply-template template (list vals)))
+    (join ret "")))
