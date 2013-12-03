@@ -6,6 +6,7 @@
 (setq otag-len (length otag))
 (setq ctag-len (length ctag))
 
+;; make a little associative list to represent tags
 (define (mk-tag type key content)
   (list (list 'type    type)
         (list 'key     key)
@@ -13,8 +14,9 @@
 
 ;; given some text, determine what kind of tag we're looking at
 (define (find-tag-type tag-text)
-  (letn (tag-text (replace "[\ \t]" tag-text "" 1)      ;; normalize: remove all spaces
-         tag-text (otag-len (- 0 ctag-len) tag-text)    ;; remove opening and closing braces
+  (letn (tag-text  (replace "[\ \t]" tag-text "" 1)
+         ;; remove opening and closing braces
+         tag-text  (otag-len (- 0 ctag-len) tag-text)    
          type_flag (first tag-text))
     (if (= type_flag "#") (mk-tag "section"   (rest tag-text))
         (= type_flag "^") (mk-tag "inverted"  (rest tag-text))
@@ -30,7 +32,9 @@
 (define (next-tag template acc)
   (let (start_index (find otag template))
     (if (nil? start_index)
-        (if (empty? template) acc (append acc (list (mk-tag "text" nil template))))
+        (if (empty? template)
+            acc
+            (append acc (list (mk-tag "text" nil template))))
         (letn (before_tag  (0 start_index template)
                acc         (if (empty? before_tag)
                                acc
@@ -60,9 +64,8 @@
 ;;     (type: text,    content: "on")
 ;;     (type: escaped, key: "instrument")))
 
-
 ;; Step through the list of tags, create a nested list of sections.
-;; We build structure iteratively.
+;; We build structure this structure iteratively.
 ;; Section-stack is the list of sections we've discovered. When we find
 ;; an open-section tag, we create a section assoc and push it on this stack.
 ;; The current section is always the head of that stack.
@@ -100,29 +103,67 @@
             (nest-sections remainder (cons tag section-stack))
 
             (= tag-type "close")
-            ;; we're closing a section. pop the section stack, saving the head into the
-            ;; conent of the enclosing section
+            ;; we're closing a section. pop the section stack, saving the head
+            ;; into the content of the enclosing section
             (letn (closed-section  current-section
                    section-stack   (rest section-stack)
                    current-section (first section-stack))
 
               (nest-sections remainder (cons
-                                        (add-content-to-section current-section closed-section)
+                                        (add-content-to-section
+                                         current-section closed-section)
                                         (rest section-stack))))
 
             ;; some other tag
             (nest-sections remainder section-stack)))))
 
-(define (apply-template template vals val-stack)
-  (setq ret (list))
-  (dolist (chunk template)
-    (letn (chunk-type    (lookup 'type chunk)
-           chunk-content (lookup 'content chunk))
-          (if
-            (=  chunk-type "section")
-              (apply-template (lookup 'content chunk) vals)
-            (= chunk-type "text")
-              (setq ret (cons ret (lookup 'content chunk)))
-            (= (lookup 'type chunk) "escaped")
-              (setq ret (cons ret (lookup (sym (lookup 'key chunk)) vals)))))
-    (join (flat ret) ""))
+(define (find-in-val-stack key stack) 
+  (if (empty? stack) nil
+      (letn (found (lookup key (first stack)))
+        (if (not (nil? found)) found
+            (find-in-val-stack key (rest stack))))))
+
+(define (apply-template template val-stack)
+  (let (ret (list))
+    (dolist (template-part template)
+            (letn (template-part-type    (lookup 'type    template-part)
+                   template-part-content (lookup 'content template-part)
+                   template-part-key     (lookup 'key     template-part))
+              
+              (if (= template-part-type "section")
+                  
+                  ;; it's a section. we do things depending on the nature of the
+                  ;; value found in the user-supplied table of values
+                  (letn (val (find-in-val-stack
+                              template-part-key
+                              val-stack))
+                    
+                    ;; this is not the best. we need to determine if the value
+                    ;; provided by the user is a list of associative lists, or a
+                    ;; single associative list, or a single value.
+                    (if (and (list? val)
+                             (list? (first val))
+                             (list? (first (first val))))
+                        ;; it is a list of associations.
+                        ;; we want to loop over these.
+                        (dolist (singleval val)
+                                (extend ret
+                                        (apply-template
+                                         template-part-content
+                                         (cons singleval (list val-stack)))))
+                        
+                        ;; it is a single association structure.
+                        (or (true? val) (list? val))
+                        (extend ret
+                                (apply-template template-part-content
+                                                (cons val val-stack)))))
+                  
+                  ;; if the template part is text, we just cons it on...
+                  (= template-part-type "text")
+                  (extend ret (list template-part-content))
+                  
+                  ;; we do some variable substitution...
+                  (= template-part-type "escaped")
+                  (extend ret (list (find-in-val-stack
+                                     template-part-key
+                                     val-stack))))))))

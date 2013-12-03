@@ -7,27 +7,40 @@
 
 (println)
 
-
-;;(define template "The band {{band}} has members {{#members}}{{name}} on {{instrument}}{{/members}}, and I like them.")
-;;(define tags (mustache:next-tag template (list)))
-;;(define parsed (mustache:nest-sections tags (list (mustache:mk-tag "section" "root" (list)))))
 (define template "The band name is {{band}}.")
 (define tags (mustache:next-tag template (list)))
-(define parsed (mustache:nest-sections tags (list (mustache:mk-tag "section" "root" (list)))))
-(set 'vals '((band "The Grateful Dead")))
+(define parsed (mustache:nest-sections
+                tags
+                (list (mustache:mk-tag "section" "root" (list)))))
 
+(define Vals:Vals)
+(Vals "vals" '(("root" (("band" "The Grateful Dead")
+                        ("goodyears" ((("year" "1969"))
+                                      (("year" "1977"))
+                                      (("year" "1981"))))
+                        ("members" ((("name" "Jerry") ("instrument" "guitar"))
+                                    (("name" "Phil")  ("instrument" "bass"))
+                                    (("name" "Pig Pen") ("instrument" "harmonica"))))
+                        ))))
 
-(define (apply-template template vals val-stack)
-        (setq ret (list))
-	(dolist (chunk template)
-	  (if (= (lookup 'mustache:type chunk) "section")
-	         (apply-template (lookup 'mustache:content chunk) vals) 
-	      (= (lookup 'mustache:type chunk) "text")    (setq ret (cons ret (lookup 'mustache:content chunk)))
-	      (= (lookup 'mustache:type chunk) "escaped") (setq ret (cons ret (lookup (sym (lookup 'mustache:key chunk)) vals)))))
- 	(join (flat ret) ""))
-	
-(println (apply-template parsed vals (list)))
+(println (join (mustache:apply-template parsed (list (Vals "vals")))
+               ""))
 
-(println)
+(define template "The band {{band}} has members {{#members}}{{name}} on {{instrument}} {{/members}}, and I like them.")
+(define tags (mustache:next-tag template (list)))
+(define parsed (mustache:nest-sections
+                tags
+                (list (mustache:mk-tag "section" "root" (list)))))
+(println (join 
+          (mustache:apply-template parsed (list (Vals "vals")))
+          ""))
+
+(define template "The band {{band}} has members {{#members}}{{name}} on {{instrument}} {{/members}}. Their good years were {{#goodyears}}{{year}} {{/goodyears}}.")
+(define tags (mustache:next-tag template (list)))
+(define parsed (mustache:nest-sections
+                tags
+                (list (mustache:mk-tag "section" "root" (list)))))
+(println (join (mustache:apply-template parsed (list (Vals "vals")))
+               ""))
 
 (exit)
